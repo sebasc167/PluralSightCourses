@@ -1,0 +1,400 @@
+Kubernetes Overview
+
+Open source system for automating deployment and management
+of containerized application. Created by google and user for 
+cluster management 
+
+You might have a load balancer that manages different nodes
+and containers which is manageable but what hapens when one of
+the containers goes down?
+
+We need some sort of process to monitor that and bring it back?
+
+It would be pretty cool to find a way to pakcage our app 
+and let another agent manage it for us and not worry about 
+managing our containers. It would be nice to find a way to scale
+our containers and also update them without bringing down the 
+entire applications. We migth want robust networks for quick 
+communication between containers.
+
+In a sense with need a conductor of a container orchesta and in 
+this case its Kubernetes
+
+- load balancing
+- storage orchestration
+- automate rollouts/backs
+- self healing  -container goes down we can automatically heal
+the container.
+- COnfiguration management of secrets 
+- horizontal scaling to have more storage
+
+With kubernetes we normally have a master node that is the 
+captain of the ship and it manages different employees or
+worker nodes.
+
+Note: the node can be a physical server or virtual machine
+
+Groups of nodes are what is called a "cluster"
+
+The master will start something on each node called a pod. It is just a way to host a container
+Consider it like the packaging for a container.
+The pod is like a space suit for a person (the container) which is inside.
+
+If want to talk to the container we need to go through the pod. If we want to know the health
+of the pod we need to expose the information from the container via the pod.
+
+So we can have many pods running containers in the nodes per cluster and need pods to communicate
+with each other or with something else and that can be accomplished via kubernetes service
+
+Again, a node is just a server. It can be an actual server or a virtual machine and each node
+can run 1 or more pods.
+the master nodes communicates with the worker nodes.
+- it uses an etcd store which is kind of like a database and it holds the information the master
+needs to track for the cluster
+- a control manageer - used when a request comes in 
+- scheduler - determines when the nodes come to life or die
+- we can interact with the master node to give it instructions to go from one state to another
+with kubectl which is a command line tool that uses an API to send different requests
+to the master node in json/yaml format and the requests can be scheduled to run on our different 
+nodes within the cluster
+
+Node
+- has pod/pods with a container in each and to communicate with the master it has an agent that registers
+the node with the cluster and reports to the master called a kubelet. Communicates with master
+node via API
+- has a container runtime - run containers within pods
+- kube proxy - ensures each node has its own IP address
+
+Benefits
+eliminates app conflicts
+environment consistency
+helps ship software faster
+orchestrates containers
+zero-downtime deployments
+self-healing powers for a container that goes down
+scalability is amazing
+you can easily make an E2E testing environment
+we an ensure that secrets and configurations are running properly on the containers
+you create a pipeline easily with different processes that can run in containers
+
+Note: a pod has a cluster IP to allow other nodes and pods within the cluster
+to talk with it. We can expose the port to deployments or prod
+
+Powershell cmd to set an alias
+
+set-alias -Name k -Value kubectl
+
+We should set up the Web UI dashboard to have an interface to view Kubernetes resources
+
+Link to deploy the Dashboard UI as a command in the cmdline:
+kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+
+-----------------------------------------
+Creating Pods
+
+
+A pod is the smallest execution unit in Kubernetes object model that can be created or deployed
+each pod is like a lego and acts as an environment for a container and we can organize the 
+applciation parts into pods like th server, APIs, database, UI
+
+Composition of a pod
+- POD IP
+- Memory
+- Volumes
+All of it can be shared across multiple containers in the pod. we cna scale horizonally by
+adding Pod replicas
+Pods live and die and replaced but never come back to life
+
+The master node scheudles pods on a node called the worker nodes
+
+Note: Pods can be scaled horizontally so we can make copies of the pods, also called
+replicas and kubernetes can load balance between those. if the pod gets sick, 
+it is replaced.
+
+Container processes bind to different ports within the pod
+Pod containers share the same network namespace (share IP)
+it is possible to have more containers within the same pod but it is not the best 
+because that means that the containers are tightly coupled and depend on each other.
+
+Note: pods never span different nodes. Port selection would be weird as well
+Note: pods and containers are only acccesible withing the kubernetes cluster by default
+
+If you try to delete a pod, it will work but it will cause another deployment to be created
+to create the pod again so a new pod of the same structure will appear but with a different
+ID. SO to delete a pod and not make it come back to life we need to delete the deployment.
+
+You can create the pod directly if it is short-lived or use a deployment to create a pod.
+this way we can monitor the pod and recreate it if it dies.
+
+Lets make a pod:
+1. open the cmdline
+2. kubectl run <podname> --image=nginx:alpine
+3. kubectl get pods
+4. now expose a port to access the pod within the cluster
+5. kubectl port-forward <podname> 8080:80
+
+YAML FUNDAMENTALS
+
+Yaml files are files composed of maps and lists, with keys and values
+indentation matters!! use spaces not tabs
+maps:
+key balue pairs
+use the colon (:)
+lists are defined with dashes
+
+yaml files can be used alongside the kubectl to make a pod with a coressponding container
+in the yaml file:
+
+kind: Pod -> what kind of resource are we creating
+metadata: 
+	name: <pod name> -> THIS IS a map
+
+if the pods alredady exists, it will generate an error
+
+kubectl apply -f file.pod.yml -> for udpating
+kubectl create -f file.pod.yml --save-config
+
+you can delete a pod using the yml that was used to create it.
+
+See PodCreation folder for example
+
+Pod health
+kubernetes relies on Probes top determine the health of the pod container.
+A probe is just a diagnostic performed periodically
+- liveness probe - if probe is healthy
+- readiness probe - says if the pod should be able to receive requests.
+
+Looks like this i the yaml:
+livenessProbe:
+	exec:
+		command: ...
+
+NOtes: Pods are the smallest unit in kubernetes, containers run within pods and shere the pods 
+memory, IP, Volumes and more
+----------------------------------------------------------------------------
+
+Creating Deployments
+
+A replica set is a declarative way to manage pods
+
+A deployment is a declarative way to manage pods using a replica
+set
+
+deployments and replica sets ensure that pods remain running
+and allows horizontal scaling of pods
+
+replicaset acts as a pod controller taking charge of the self
+healing mechanism
+
+a deployment manages pods
+
+you can do a zero downtime deployment where we can deploy software updates to production 
+without impact to customers
+with zero downtime we have a few of the old pods and introduce one of the new pods and 
+discard one of the old ones. then we exchange another old one for the new one and if
+tuings still work we repeat the process until all the old pods are replaced by the new
+pods (updated ones)
+
+-----------------------------------------------------------------------
+Service creating - basically how pods can communicate
+
+Services - provides a single point of entry for accessing one or more pods 
+
+Recall that pods will  want to talk with each other and when a pod is discarded and 
+replaced the IP address is different so the hard-coded IP address that is in the pod
+calling the other pod (back end i.e.) will be invalid the instant the receiver pod goes down
+so we cannot rely on the IP address. Note that the IP address of the pod exists only when
+the pod is scheduled.
+
+This is why we need services!!
+Services abstract POD id addresses from consumers. The service created endpoints which
+are between the service and pod
+labels attached to pods are critical!!
+
+Service types
+1 ClusterIp - expose service internally with a default cluster internal IP address. 
+Pods withing the cluster can talk to that service
+NodePort - expose the service on ech node's IP
+Loadbalancer - provision an external IP to act as the load balancer
+externalName - maps service to DNS name.
+
+----------------------------------------------------------------------
+Storage
+
+How is application state exchanged between pods?
+volume can be used to hold data and state and use it in a pod
+
+a pod have connect to multiple volumes. containers rely on the mountPath to 
+access the volume
+ 
+A volume references a storage locations= and have a unique name and attached to a pod
+a volume mount references the volume
+Ex:
+emptyDir - empty dir for storing transient data also called the ephemeral storage and is connected
+to the lifetime of the pod
+hostpath  - pod mounts tinot nodes filesystem
+NFS  - network file system share mounted into the pod
+
+ConfigMap/Secret - special type of volume that provides the pod with access to
+Kubernetes resources
+
+the intial volume is called html and is an empty directory, is tied to lifetime of pod
+it will reference the html volume and define the mount path.
+Normally in the YAML file we define the volumes and give it a name and location
+and each continer has the ability to connect to the volume to save information but we
+need the mount so in the container we define the volumeMount which connects to one of the 
+volumes defined previously. You save the name and mount path
+
+--------------------------------------------------------------------------
+Creating ConfigMaps and Secrets
+
+We can store sensitive data in something called a secret.
+Pods can consume the configMaps and use them so we are still in the storage realm
+
+ConfigMaps provides a way to store configuration information and provide it to containers. 
+the configurations can be used anywhere in the cluster
+
+configMaps provide a way to inject config data into a container.
+you vcan store entire files or provide key-value pairs
+- with a file ythe key is a filename and the value is the contents
+
+Configmaps can be accessed from a pod using env variables or a configmap volume
+which can hold a file with all the configmap key-value pairs
+
+you can have a yaml file that is submitted to kubernetes with the kubectl create ...
+the key-value pairs are provided in the data section
+data:
+	key: value
+	key1: value1
+
+we can make the configmap from a file
+
+kubectl create configmap [configmap-name] --from-file=[path to file yml]
+
+we can also make an environment file
+gameconfig.env i.e.
+
+kubectl create configmap [cm-name] --from-env-file=[path to file]
+data:
+	key = value
+	key1 = value (notice it is not : but =)
+
+-------------
+to get a config map
+kubectl get cm [cm-name] -o yaml
+
+----------
+so yuo can create the configmap's key-value pairs seen here in yaml:
+
+apiVersion: v2
+kind: ConfigMap
+
+metadata: 
+	name: app-settings -> nameof conmap
+data:
+	something: someValue
+	key1: value1
+
+-------------
+if the pod wants to access the information in that yaml, it would be like this:
+apiVersion: apps/v1
+...
+spec:
+	containers:
+	env:  ->>> you include this fragment
+		- name: ENV-VAR NAME HERE (WE MAKE THIS NAME UP to call the env var)
+		valueFrom:
+			configMapKeyRef:
+				name: app-settings (which configmap are we grabbing info from)
+				key: something
+
+Want to load all of the data??
+same as above but...
+	containers:
+		envFrom:
+			-configMapRef:
+			name: app-settings
+
+----------------------------------
+A secret is an object that has sensitive data like a password, token or key
+and we make it available to a pod
+we mount the secrets into pods as files or as env variables
+
+remember that config maps are available to all nodes in the cluster while 
+secrets are only available to the nodes with pods that request access to the secret
+
+secrets are stored in tmpfs on a node (not on disk)
+
+limit access to etcd which is where secrets are stored to only admin users
+
+pods can access secrets so make sure we are positive about whooo can make pods
+because someone that can make pods can access secrets.
+We can use a secret to store a connection string to a database like this:
+
+kubectl create secret generic <my-secret> --from-literal=pwd=my-password
+
+we can use this command to load files
+
+kubectl create secret generic <my-secret>
+	--from-file=ssh-privatekey=<filepath>
+
+If you are wondering, you can declaratively define secrets using YAML like we have done above ^^ 
+
+apiVersion: v3
+kind: secret
+metadata:
+	name: db-password
+type: opaque
+data:
+	app-password: cccc
+	admin-password: dwdwd
+
+This is dangerous since this YAML file is floating around.
+
+Now for the pod:
+...
+spec:
+	...
+	spec:
+		containers:
+		env: 
+		-name: DB_PASSWORD
+		valueFrom: 
+			secretKeyRef:
+				name: db-passwords
+				key: db-password
+
+We can use volume map to get to the secrets in a container
+------------------------------
+Summary
+pod - most basic type of resource and are in charge of ensuring containers 
+are running and handle restarting containers as needed
+you can make one with a YAML file (type: Pod) and the kubectl create command
+
+deployment - declartive way to amange prods using a sreplica set. we can set the 
+number of replicas for the node. we can have a zero downtime deployment which means
+we start using the new version of the pod and eliminate pods of the old version.
+
+a deployment wraps around a replicaset which wraps around a pod which wraps around a
+container
+the dpeloyment will be make the pod is rescheduled to appear again so that the desire number 
+of healthy pods exists (defined in replica number -> replicas = 4)
+
+how do pods talk??
+with a service. it provides IP addresses for pods so pods can talk to either without
+knowing the IP address of the other pods (if the other pods die a new IP address comes out).
+the tag is key for connecting a service (backend i.e.) to the correpsonding pods
+
+		
+storage classes
+
+volumes
+presistent volumes
+strage classes
+configmaps
+secrets
+
+the options allow pod containers to store data within the pods on worker nodes or outside the 
+cluster.
+configMaps and secrets lets config info and sensitive info to be provided to pods using 
+env variables or volumes
